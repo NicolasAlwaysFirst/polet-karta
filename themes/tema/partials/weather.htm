@@ -1,0 +1,27 @@
+==
+<?php function onStart() {
+$apiKey = "8a67171278f32c4a610e8bc2e067c089";
+$cityId = "2026609"; 
+$apiUrl = "http://api.openweathermap.org/data/2.5/weather?id={$cityId}&appid={$apiKey}&units=metric&lang=ru";
+
+
+$weatherData = json_decode(file_get_contents($apiUrl), true);
+$output = "";
+if ($weatherData) {
+    $temp = $weatherData['main']['temp'];
+    $weather = $weatherData['weather'][0]['description'];
+    $output .=
+   "<p>Температура: {$temp}°C</p>".
+    "<p>Погода: {$weather}</p>";
+} else {
+    $output .= "<p>Unable to retrieve weather data.</p>";
+   
+}
+ $this['output'] = $output;
+}
+?>
+==
+<div class = "ff">
+<h2>Погода</h2>
+</div>
+{{output|raw}}

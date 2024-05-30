@@ -1,0 +1,6 @@
+url="logout"
+[session]
+==
+
+{% do session.onLogout() %}
+ {% do redirect('/') %}

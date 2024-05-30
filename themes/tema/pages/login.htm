@@ -1,0 +1,48 @@
+title = "auth"
+url = "/auth"
+layout = "layout1"
+
+[authentication]
+
+==
+<?php
+function onLogin()
+{
+    try {
+        $this->authentication->onLogin();
+        return redirect('/don');
+    }
+    catch (Exception $ex) {
+        Log::error($ex);
+    }
+}?>
+==
+
+<div class="container">
+    <div class="parent">
+        {% if not user %}
+        <h1>Войдите в ваш аккаунт</h1>
+        {{ form_ajax('onLogin') }}
+        <input
+            name="username"
+            type="text"
+            placeholder="Имя пользователя"
+            class="form-control"
+            id="userSigninLogin"/>
+        <input
+            placeholder="Пароль"
+            name="password"
+            type="password"
+            class="form-control"
+            id="userSigninPassword"/>
+        <input name="remember" type="hidden" value="1">
+        <div class="forgot">Забыли пароль?</div>
+        <a href="{{'reg'|page}}">Зарегистрироваться</a>
+        <button type="submit" class="enter">Войти</button>
+        {{ form_close() }}
+        {% else %}
+            {% do redirect('/don') %}
+        {% endif %}
+    </div>
+
+</div>

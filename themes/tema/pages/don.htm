@@ -1,0 +1,241 @@
+url="/don"
+layout="layout1"
+==
+<?php 
+    function onStart() {
+        $this["domain"] = $_SERVER['SERVER_NAME'];
+        return;
+    }
+?>
+==
+<section>
+
+    <style>
+        .sidebar {
+    background-color: black;
+    color: white;
+    width: 200px;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 900px;
+    padding-top: 60px;
+        }
+        .sidebar .profile {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .sidebar .profile img {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: white;
+        }
+        .sidebar .menu {
+            width: 100%;
+        }
+        .sidebar .menu button {
+            width: 100%;
+            padding: 20px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 20px;
+            background-color: white;
+            color: black;
+            cursor: pointer;
+            text-align: left;
+            padding-left: 20px;
+        }
+        .sidebar .menu button:hover {
+            background-color: #f0f0f0;
+        }
+        .main-content {
+            background-color: #d1ff00;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+        .bll{
+        display: flex;
+        width: 100%%;
+        }
+
+    </style>
+</head>
+<body>
+<div class="bll">
+    <div class="sidebar">
+        <div class="profile">
+            <img src="{{ 'assets/images/nic.png'|theme}}" alt="">
+            <p>{{user.first_name}}</p>
+            <p>Rating: 0</p>
+        </div>
+        <div class="menu">
+            <button>Главная</button>
+            <button>События</button>
+            <button>Друзья</button>
+            <button>Анализ</button>
+            <button>Турниры</button>
+            <button>Достижения</button>
+        </div>
+    </div>
+    <div class="main-content">
+<div id="map" style="height:100%; width:100%">
+</div>
+    </div>
+
+
+
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+    <script>
+  ymaps.ready(init);
+
+        function loadGeoJSON(fileName) {
+            fetch("{{ 'assets/' | theme }}/" + fileName)
+                .then(response => response.json())
+                .then(data => {
+                    data.features.forEach(feature => {
+                        const { geometry, properties } = feature;
+                        if (geometry.type === 'Polygon') {
+                            const coordinates = geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
+                            const polygon = new ymaps.Polygon([coordinates], {
+                                hintContent: properties.description
+                            }, {
+                                fillColor: properties.fill,
+                                fillOpacity: properties['fill-opacity'],
+                                strokeColor: properties.stroke,
+                                strokeOpacity: properties['stroke-opacity'],
+                                strokeWidth: properties['stroke-width']
+                            });
+                            window.myGeoObjects.add(polygon);
+                        } else if (geometry.type === 'Point') {
+                            const point = geometry.coordinates;
+                            const placemark = new ymaps.Placemark([point[1], point[0]], {
+                                hintContent: properties.description,
+                                iconCaption: properties.iconCaption
+                            }, {
+                                preset: 'islands#blueDotIconWithCaption',
+                                iconColor: properties['marker-color']
+                            });
+                            window.myGeoObjects.add(placemark);
+                        }
+                    });
+                    window.map.geoObjects.add(window.myGeoObjects);
+                    window.map.setBounds(window.myGeoObjects.getBounds());
+                })
+                .catch(error => console.error('Ошибка при загрузке GeoJSON:', error));
+        }
+
+        function init() {
+            window.map = new ymaps.Map("map", {
+                center: [50.2906, 127.5272], // Центр карты Благовещенск
+                zoom: 10
+            });
+            window.myGeoObjects = new ymaps.GeoObjectCollection({}, {
+                preset: "islands#redCircleIcon",
+                strokeWidth: 4,
+                geodesic: true
+            });
+
+            loadGeoJSON("map1.geojson");
+
+            // Подключение к WebSocket-серверу
+            const socket = new WebSocket('wss://{{ domain }}/map');
+            const userMarkers = {};
+            const userTimers = {};
+            let currentPosition = null;
+
+            // Создание метки для пользователя
+            let userLocation;
+
+            function sendCoordinates(coords) {
+                const message = JSON.stringify({
+                    type: 'coordinates',
+                    latitude: coords[0],
+                    longitude: coords[1]
+                });
+                socket.send(message);
+            }
+
+            function startRemoveTimer(userId) {
+                if (userTimers[userId]) {
+                    clearTimeout(userTimers[userId]);
+                }
+                userTimers[userId] = setTimeout(() => {
+                    if (userMarkers[userId]) {
+                        window.map.geoObjects.remove(userMarkers[userId]);
+                        delete userMarkers[userId];
+                        delete userTimers[userId];
+                    }
+                }, 30000); // 30 секунд
+            }
+
+            socket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'coordinates') {
+                    const { userId, latitude, longitude } = data;
+                    const userCoordinates = [latitude, longitude];
+
+                    if (!userMarkers[userId]) {
+                        const marker = new ymaps.Placemark(userCoordinates, {
+                            hintContent: "Пользователь " + userId
+                        }, {
+                            preset: 'islands#blueCircleDotIconWithCaption',
+                            iconCaptionMaxWidth: '50'
+                        });
+                        window.map.geoObjects.add(marker);
+                        userMarkers[userId] = marker;
+                    } else {
+                        userMarkers[userId].geometry.setCoordinates(userCoordinates);
+                    }
+
+                    startRemoveTimer(userId);
+                }
+            };
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(position => {
+                    const { latitude, longitude } = position.coords;
+                    const userCoordinates = [latitude, longitude];
+                    currentPosition = userCoordinates;
+
+                    if (!userLocation) {
+                        userLocation = new ymaps.Placemark(userCoordinates, {
+                            hintContent: "Вы здесь"
+                        }, {
+                            preset: 'islands#redCircleDotIconWithCaption',
+                            iconCaptionMaxWidth: '50'
+                        });
+                        window.map.geoObjects.add(userLocation);
+                    } else {
+                        userLocation.geometry.setCoordinates(userCoordinates);
+                    }
+
+                    sendCoordinates(userCoordinates);
+                }, error => {
+                    console.error("Ошибка при определении местоположения: ", error);
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                });
+
+                setInterval(() => {
+                    if (currentPosition) {
+                        sendCoordinates(currentPosition);
+                    }
+                }, 15000);
+            } else {
+                console.error("Геолокация не поддерживается вашим браузером.");
+            }
+        }
+</script>
+</section>
+
+{%if not user %}
+ {% do redirect('/') %}
+{% endif %} 

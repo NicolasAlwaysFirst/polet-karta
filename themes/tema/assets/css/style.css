@@ -4,8 +4,17 @@ body {
   color: #000000;
   background-color: #ffffff;
   overflow-x: hidden;
+  background-color: #000000;
 }
 
+@font-face {
+  font-family: 'PionerSans';
+  src: url('../fonts/PionerSans-Regular.ttf')  format('truetype');
+}
+
+* {
+  font-family: 'Ubuntu';
+}
 .layout_padding {
   padding: 90px 0;
 }
@@ -81,6 +90,12 @@ a:focus {
   outline: none !important;
   -webkit-box-shadow: none;
           box-shadow: none;
+}
+.ff{
+  color: #ffffff;
+}
+p{
+  color: #ffffff;
 }
 
 /*header section*/
