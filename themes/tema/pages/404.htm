@@ -1,0 +1,33 @@
+url="/404"
+layout="layout1"
+==
+<?php 
+    function onStart() {
+        $this["domain"] = $_SERVER['SERVER_NAME'];
+        return;
+    }
+?>
+==
+  <section class="polet">
+    <div class="container">
+        <div class="mnogo">
+            <div class="ecs">
+                <img src="{{'assets/images/чучутьлес.jpeg'|theme}}" alt="">
+                <div>
+                <h1>
+                    404
+                </h1>
+                 <h4>
+                    страница не найдена
+                </h4>
+                </div>
+               
+            </div>
+            <div class="les">
+                <img src="{{'assets/images/лес.jpeg'|theme}}" alt="">
+            </div>
+        </div>
+        </div>
+    </section>
+
+<section>
